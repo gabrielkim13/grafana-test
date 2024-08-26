@@ -1,0 +1,51 @@
+services:
+  grafana:
+    image: grafana/grafana
+    ports:
+      - 3000:3000
+    profiles:
+      - grafana
+      - prometheus
+      - loki
+    volumes:
+      - $PWD/docker/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+
+  loki:
+    depends_on:
+      - grafana
+      - promtail
+    image: grafana/loki
+    ports:
+      - 3100:3100
+    profiles:
+      - loki
+    volumes:
+      - $PWD/docker/loki/local-config.yaml:/etc/loki/local-config.yaml
+
+  node:
+    build: .
+    ports:
+      - 3333:3333
+    profiles:
+      - prometheus
+
+  prometheus:
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    depends_on:
+      - node
+    image: prom/prometheus
+    ports:
+      - 9090:9090
+    profiles:
+      - prometheus
+    volumes:
+      - $PWD/docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  promtail:
+    image: grafana/promtail
+    profiles:
+      - loki
+    volumes:
+      - $PWD/docker/promtail/config.yml:/etc/promtail/config.yml
+      - $PWD/log:/var/log
